@@ -122,13 +122,21 @@ def main(args):
             1.  Add tensor shape annotation to each of the output tensor
             2.  Add line-by-line description about the following lines of code do.
             '''
+            # the source tokens, source lengths and target inputs are passed to the model.
+            # forward propagation is done and the output is obtained.
             output, _ = model(sample['src_tokens'], sample['src_lengths'], sample['tgt_inputs'])
-
+            
+            # output: [ max_tgt_len,batch_size, tgt_vocab_size]
+            # cross entropy loss is calculated between the output and the target tokens by flattening the tensor and then dividing by src length.
             loss = \
                 criterion(output.view(-1, output.size(-1)), sample['tgt_tokens'].view(-1)) / len(sample['src_lengths'])
+            # back propagation is performed and the gradients are calculated.
             loss.backward()
+            # gradient clipping is done to avoid vanishing and exploding gradients.
             grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip_norm)
+            # the optimizer is updated with the gradients.
             optimizer.step()
+            # the gradients are resetted to zero value.
             optimizer.zero_grad()
             '''___QUESTION-1-DESCRIBE-E-END___'''
 
