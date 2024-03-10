@@ -115,7 +115,6 @@ class LSTMEncoder(Seq2SeqEncoder):
 
         # Transpose batch: [batch_size, src_time_steps, num_features] -> [src_time_steps, batch_size, num_features]
         src_embeddings = _src_embeddings.transpose(0, 1)
-
         # Pack embedded tokens into a PackedSequence
         packed_source_embeddings = nn.utils.rnn.pack_padded_sequence(src_embeddings, src_lengths.data.tolist())
 
@@ -166,10 +165,8 @@ class AttentionLayer(nn.Module):
         # Get attention scores
         # [batch_size, src_time_steps, output_dims]
         encoder_out = encoder_out.transpose(1, 0)
-
         # [batch_size, 1, src_time_steps]
         attn_scores = self.score(tgt_input, encoder_out)
-
         '''
         ___QUESTION-1-DESCRIBE-A-START___
         1.  Add tensor shape annotation to each of the output tensor
@@ -257,7 +254,8 @@ class LSTMDecoder(Seq2SeqDecoder):
         if self.use_lexical_model:
             # __QUESTION-5: Add parts of decoder architecture corresponding to the LEXICAL MODEL here
             # TODO: --------------------------------------------------------------------- CUT
-            pass
+            self.lexical_projection_hidden = nn.Linear(embed_dim, embed_dim, bias=False)
+            self.lexical_projection_output = nn.Linear(embed_dim, len(dictionary))
             # TODO: --------------------------------------------------------------------- /CUT
 
     def forward(self, tgt_inputs, encoder_out, incremental_state=None):
@@ -332,9 +330,14 @@ class LSTMDecoder(Seq2SeqDecoder):
                 if self.use_lexical_model:
                     # __QUESTION-5: Compute and collect LEXICAL MODEL context vectors here
                     # TODO: --------------------------------------------------------------------- CUT
-                    pass
+                    attn_weights_reshaped = step_attn_weights.unsqueeze(dim=1)
+                    src_context = torch.bmm(attn_weights_reshaped,src_embeddings.transpose(0, 1)).squeeze(dim=1)
+                    lexical_activated_context = torch.tanh(src_context)
+                    # adding the skip with a tanh activation
+                    hidden_src_context = torch.tanh(self.lexical_projection_hidden( \
+                                                    lexical_activated_context)) + lexical_activated_context
+                    lexical_contexts.append(hidden_src_context)
                     # TODO: --------------------------------------------------------------------- /CUT
-
             input_feed = F.dropout(input_feed, p=self.dropout_out, training=self.training)
             rnn_outputs.append(input_feed)
             '''___QUESTION-1-DESCRIBE-D-END___'''
@@ -351,11 +354,13 @@ class LSTMDecoder(Seq2SeqDecoder):
 
         # Final projection
         decoder_output = self.final_projection(decoder_output)
-
         if self.use_lexical_model:
             # __QUESTION-5: Incorporate the LEXICAL MODEL into the prediction of target tokens here
             # TODO: --------------------------------------------------------------------- CUT
-            pass
+            lexical_contexts = torch.cat(lexical_contexts, dim=0).view(tgt_time_steps, \
+                                                    batch_size, self.embed_dim)
+            lexical_contexts = lexical_contexts.transpose(0, 1)
+            decoder_output += self.lexical_projection_output(lexical_contexts)
             # TODO: --------------------------------------------------------------------- /CUT
 
         return decoder_output, attn_weights
