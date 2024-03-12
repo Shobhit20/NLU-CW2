@@ -97,8 +97,11 @@ class TransformerEncoder(Seq2SeqEncoder):
         ___QUESTION-6-DESCRIBE-A-START___
         1.  Add tensor shape annotation to each of the output tensor
         2.  What is the purpose of the positional embeddings in the encoder and decoder? 
+        # positional embeddings are used to add information about the position of the word in the sentence. resulting in variant representations of the same word depending on its position in the sentence.
+
         '''
         embeddings += self.embed_positions(src_tokens)
+        # embeddings = [batch_size, src_time_steps, num_features]
         '''
         ___QUESTION-6-DESCRIBE-A-END___
         '''
@@ -191,6 +194,7 @@ class TransformerDecoder(Seq2SeqDecoder):
             4.  Why do we not need a mask for incremental decoding?
             '''
             self_attn_mask = self.buffered_future_mask(forward_state) if incremental_state is None else None
+            # self_attn_mask = [tgt_time_steps, tgt_time_steps]
             '''
             ___QUESTION-6-DESCRIBE-B-END___
             '''

@@ -208,8 +208,31 @@ class MultiHeadAttention(nn.Module):
         # attn_weights is the combined output of h parallel heads of Attention(Q,K,V) in Vaswani et al. 2017
         # attn_weights must be size [num_heads, batch_size, tgt_time_steps, key.size(0)]
         # TODO: REPLACE THESE LINES WITH YOUR IMPLEMENTATION ------------------------ CUT
-        attn = torch.zeros(size=(tgt_time_steps, batch_size, embed_dim))
-        attn_weights = torch.zeros(size=(self.num_heads, batch_size, tgt_time_steps, -1)) if need_weights else None
+        q_projected = self.q_proj(query)
+        k_projected = self.k_proj(key)
+        v_projected = self.v_proj(value)
+
+        q_head = q_projected.reshape(tgt_time_steps, batch_size * self.num_heads, self.head_embed_size)
+        k_head = k_projected.reshape(-1, batch_size * self.num_heads, self.head_embed_size)
+        v_head = v_projected.reshape(-1, batch_size * self.num_heads, self.head_embed_size)
+
+        q_head = q_head.transpose(0, 1)
+        k_head = k_head.transpose(0, 1)
+        v_head = v_head.transpose(0, 1)
+
+        attn_scores = torch.bmm(q_head, k_head.transpose(1, 2))
+        attn_scores/= self.head_scaling
+        attn_scores = F.softmax(attn_scores, dim=-1)
+
+        if self.attention_dropout > 0:
+            attn_scores = F.dropout(attn_scores, p=self.attention_dropout, training=self.training)
+        
+        attn = torch.bmm(attn_scores, v_head)
+        attn = attn.transpose(0, 1).contiguous().view(tgt_time_steps, batch_size, embed_dim)
+        attn = self.out_proj(attn)
+        attn_weights = attn_scores.view( self.num_heads,batch_size, tgt_time_steps, -1) if need_weights else None
+        # attn = torch.zeros(size=(tgt_time_steps, batch_size, embed_dim))
+        # attn_weights = torch.zeros(size=(self.num_heads, batch_size, tgt_time_steps, -1)) if need_weights else None
         # TODO: --------------------------------------------------------------------- CUT
 
         '''
