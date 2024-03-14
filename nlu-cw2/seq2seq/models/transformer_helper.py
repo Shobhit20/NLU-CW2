@@ -225,13 +225,14 @@ class MultiHeadAttention(nn.Module):
         
         if self.attention_dropout > 0:
             attn_scores = F.dropout(attn_scores, p=self.attention_dropout, training=self.training)
-        if attn_mask is not None:
-            attn_scores = attn_scores + attn_mask
 
         if key_padding_mask is not None:
             attn_scores = attn_scores.view(batch_size, self.num_heads, tgt_time_steps, -1)
             attn_scores = attn_scores.masked_fill(key_padding_mask.unsqueeze(1).unsqueeze(2), float('-inf'))
             attn_scores = attn_scores.view(batch_size * self.num_heads, tgt_time_steps, -1)
+
+        if attn_mask is not None:
+            attn_scores = attn_scores + attn_mask
 
         attn_scores = F.softmax(attn_scores, dim=-1)
         
