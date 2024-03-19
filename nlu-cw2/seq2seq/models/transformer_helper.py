@@ -31,6 +31,10 @@ class TransformerEncoderLayer(nn.Module):
         '''
         ___QUESTION-6-DESCRIBE-D-START___
         1.  What is the purpose of encoder_padding_mask? 
+            - The purpose of encoder_padding_mask is to mask the padding tokens in the input sequence.
+            - This is important because the padding tokens do not contain any useful information and should 
+              not be used in the attention mechanism.
+            - This enables the attention mechanism to focus on the meaningful tokens in the input sequence.
         '''
         state, _ = self.self_attn(query=state, key=state, value=state, key_padding_mask=encoder_padding_mask)
         '''
@@ -112,8 +116,18 @@ class TransformerDecoderLayer(nn.Module):
         '''
         ___QUESTION-6-DESCRIBE-E-START___
         1.  How does encoder attention differ from self attention? 
+            - The self attention mechanism attends the dependencies between different words in the input and applied within the encoder.
+            - The encoder attention mechanism captures the dependencies between the input and output sequences - between the encoder 
+              and decoder.
         2.  What is the difference between key_padding_mask and attn_mask? 
+            - key_padding_mask is used to mask the padding tokens in the key matrix.
+              has same shape as key matrix and contains binary values. it ensure that decoder doesn't attend these padded tokens
+            - attn_mask is used to mask the attention scores. It prevents the model from attending to future tokens.
+              consisting of -inf values, in the upper triangular part of the attention matrix
         3.  If you understand this difference, then why don't we need to give attn_mask here?
+            - The attn_mask is not needed for calculating the encoder attention in the decoder layer. Though attn_mask prevents attending
+              to future tokens, it is not needed in the decoder layer as all tokens are necessary for the decoder to translate.
+            - Not adding attn_mask here ensures that the decoder attends to all tokens 
         '''
         state, attn = self.encoder_attn(query=state,
                                         key=encoder_out,

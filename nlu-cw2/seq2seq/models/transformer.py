@@ -97,7 +97,11 @@ class TransformerEncoder(Seq2SeqEncoder):
         ___QUESTION-6-DESCRIBE-A-START___
         1.  Add tensor shape annotation to each of the output tensor
         2.  What is the purpose of the positional embeddings in the encoder and decoder? 
-        # positional embeddings are used to add information about the position of the word in the sentence. resulting in variant representations of the same word depending on its position in the sentence.
+            -   positional embeddings are used to add information about the position of the word in the sentence.
+            -   Resulting in variant representations of the same word depending on its position in the sentence.
+            -   Simultaneously the parallelism of the transformer architecture is maintained without losing context.
+            -   In both the encoder and decoder, the positional embeddings help in keeping track of the order of 
+                the words in the sentence.
 
         '''
         embeddings += self.embed_positions(src_tokens)
@@ -190,8 +194,18 @@ class TransformerDecoder(Seq2SeqDecoder):
             ___QUESTION-6-DESCRIBE-B-START___
             1.  Add tensor shape annotation to each of the output tensor
             2.  What is the purpose of self_attn_mask? 
+                -   The self_attn_mask is used to prevent the decoder from attending to subsequent tokens in the sequence.
             3.  Why do we need it in the decoder but not in the encoder?
+                -   In the decoder the word prediction at time step t shpuld be dependent on the words at time steps 0 to t-1.
+                -   the self_attn_mask is used to prevent the decoder from looking at the future words in the sequence.
+                -   In the encoder, the self_attn_mask is not needed as the word order might change from the source to the target.
+                    for example, in the case of translation, the word order in the source language might not be the same as the
+                    target language. as a result a holistic view of the source sentence is needed. a similar view in decoder will 
+                    result in next word prediction and not the translation.
             4.  Why do we not need a mask for incremental decoding?
+                -   The decoder generates the output one token at a time, it only has access to the previously generated tokens and the encoder
+                    representations, indicating that the decoder naturally cannot attend to future tokens that have not been generated yet.
+
             '''
             self_attn_mask = self.buffered_future_mask(forward_state) if incremental_state is None else None
             # self_attn_mask = [tgt_time_steps, tgt_time_steps]
@@ -220,7 +234,14 @@ class TransformerDecoder(Seq2SeqDecoder):
             '''
             ___QUESTION-6-DESCRIBE-C-START___
             1.  Why do we need a linear projection after the decoder layers? 
+                -   The linear projection is used to map the decoder output to the target vocabulary size.
+                -   The linear projection helps in converting the higher dimensional complex data into generating
+                    the probability distribution over the target vocabulary. directing the model to result in 
+                    correct output space.
             2.  What would the output represent if features_only=True?
+                -   If features_only=True, the output would represent the decoder output after the last layer.
+                    without the linear projection, hence a higher dimensional complex data. it represents the
+                    learned information from the input sequence till the current time step.
             '''
             forward_state = self.embed_out(forward_state)
             '''

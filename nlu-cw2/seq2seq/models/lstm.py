@@ -175,9 +175,10 @@ class AttentionLayer(nn.Module):
                 sent_tensor = create_sentence_tensor(...) 
                 # sent_tensor.size = [batch, sent_len, hidden]
         2.  Why do we need to apply a mask to the attention scores?
-            - masking makes it feasible to use transformers in autoregressive ways for seq2seq(in this case translation from en -> de). 
-            - masking using such low value(float -inf) results in softmax function to give a probability of 0 to the masked positions.
-            - Further the masking in the decoder is done to prevent the model from looking at padding tokens in the source sentence as they do not add any meaning. 
+            - masking is using to control which parts of the input are used to calculate the attention weights.
+            - the mask is used to prevent the model from attending to the padded elements in the input sequence.
+            - further prevents model from not considering future tokens, ensuring that the model only attends 
+                to the tokens that have been processed so far.
         '''
         if src_mask is not None:
             src_mask = src_mask.unsqueeze(dim=1)
@@ -202,8 +203,8 @@ class AttentionLayer(nn.Module):
         ___QUESTION-1-DESCRIBE-B-START___
         1.  Add tensor shape annotation to each of the output tensor
         2.  How are attention scores calculated? 
-        using the Luong attention scoring function, the attention scores are calculated as the dot product matrix multiplication between the tgt_input and the projected_encoder_out. 
-        a similarity score between the target input and each part of the encoded source sequence, which is then used to derive the attention weights and context vector.
+        The attention scores are calculated as the dot product matrix multiplication between the tgt_input and the projected_encoder_out. 
+        it measures the similarity between the tgt_input and the encoder_out.
         '''
         projected_encoder_out = self.src_projection(encoder_out).transpose(2, 1)
         # projected_encoder_out has shape = [batch_size, output_dims, src_time_steps]
@@ -283,8 +284,12 @@ class LSTMDecoder(Seq2SeqDecoder):
         # Initialize previous states (or retrieve from cache during incremental generation)
         '''
         ___QUESTION-1-DESCRIBE-C-START___
-        1.  When is cached_state == None? at the beginning of the seq.
-        2.  What role does input_feed play? the role is to use the output from previous time step as input to the current time step.
+        1.  When is cached_state == None?
+            -   When model ran for the first time
+            -   when the model is not in incremental generation state.
+        2.  What role does input_feed play? 
+            -   It provide the previous output of the decoder as input to the current time step.
+            -   If cached_state is not None, the input_feed is retrieved from the cached state.
         '''
         cached_state = utils.get_incremental_state(self, incremental_state, 'cached_state')
         if cached_state is not None:
@@ -318,8 +323,10 @@ class LSTMDecoder(Seq2SeqDecoder):
             '''
             ___QUESTION-1-DESCRIBE-D-START___
             1.  Why is the attention function given the previous target state as one of its inputs? 
-            attention of source seq based on current decoder state
-            2.  What is the purpose of the dropout layer? - to prevent overfitting and to improve generalization. regularizing the attention mechanism.
+                -   It enables the attention mechanism to focus on different parts of the source sentence at different time steps.
+                -   It enables decoder to be informed about the previous state of the decoder.
+            2.  What is the purpose of the dropout layer? 
+                -   To prevent overfitting and to improve generalization. regularizing the attention mechanism.
             '''
             if self.attention is None:
                 input_feed = tgt_hidden_states[-1]

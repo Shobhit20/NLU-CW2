@@ -125,8 +125,8 @@ def main(args):
             # the source tokens, source lengths and target inputs are passed to the model.
             # forward propagation is done and the output is obtained.
             output, _ = model(sample['src_tokens'], sample['src_lengths'], sample['tgt_inputs'])
-            
             # output: [ max_tgt_len,batch_size, tgt_vocab_size]
+            
             # cross entropy loss is calculated between the output and the target tokens by flattening the tensor and then dividing by src length.
             loss = \
                 criterion(output.view(-1, output.size(-1)), sample['tgt_tokens'].view(-1)) / len(sample['src_lengths'])
